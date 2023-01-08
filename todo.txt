@@ -1,0 +1,2 @@
+- mail
+- no de inclinação por led red em loop a mudar as cores e parar com um button
