@@ -1,25 +1,70 @@
-const int fotoresistorePin = 3; // pino de entrada do fotoresistore
-const int buzzerPin = 13; // pino de saída do buzzer
-const int ledRed1 = 12;
-const int ledRedRGB = 10;
-const int ledBlueRGB = 9;
-const int ledGreenRGB = 8;
-const int sensorPin = 2; // pino de entrada do sensor de inclinação
+const int fotoresistorePin = 3;
+const int buzzerPin = 13; 
+const int ledRed1 = 11;
+const int buttonInclinacao = 12;
+int estadoButton = 0;
+const int sensorPin = 2; 
+bool alarmInclinacao = false;
+const int redPin = 10; //Pino do RED
+const int bluePin = 9; //Pino do BLUE
+const int greenPin = 8; //Pino do GREEN
+const bool invert = true;
+int color = 0; // valor HUE
+int R, G, B; // variáveis RGB
 
 void setup() {
+  Serial.begin(9600);
+  
   pinMode(fotoresistorePin, INPUT); // configura o fotoresistore como entrada
   pinMode(ledRed1, OUTPUT); // configura o LED multicolorido como saída
-  pinMode(ledRedRGB, OUTPUT); // configura o LED multicolorido como saída
-  pinMode(ledBlueRGB, OUTPUT); // configura o LED multicolorido como saída
-  pinMode(ledGreenRGB, OUTPUT); // configura o LED multicolorido como saída
   pinMode(buzzerPin, OUTPUT); // configura a campainha como saída
   pinMode(sensorPin, INPUT_PULLUP); // configura o detetor de inclinação como entrada com pull-up interno
-
+  pinMode(buttonInclinacao , INPUT);
+  
   attachInterrupt(digitalPinToInterrupt(fotoresistorePin), ativarAlarmeFogo, CHANGE); // ativa a interrupção para o fotoresistore
   attachInterrupt(digitalPinToInterrupt(sensorPin), ativarAlarmeInclinacao, FALLING); // ativa a interrupção para o detetor de inclinação
 }
 
 void loop() {
+  
+  // ativa o alarme de inclinação
+  if(alarmInclinacao == true)
+  {
+    digitalWrite(buzzerPin, HIGH);
+    
+    // Valor do brilho (0 - 255)
+  	int brightness = 255;
+
+  	hueToRGB(color, brightness);
+
+    // Fornecer valores às variáveis
+    analogWrite(redPin, R);
+    analogWrite(greenPin, G);
+    analogWrite(bluePin, B);
+
+    color++;
+
+    if (color > 255)
+      color = 0;
+
+    delay(5);
+  }
+  else
+  {
+    analogWrite(redPin, 0);
+	analogWrite(greenPin, 0);
+	analogWrite(bluePin, 0);
+  	digitalWrite(buzzerPin, LOW);
+  }
+  
+  // desativa o alarme de inclinação
+  estadoButton = digitalRead(buttonInclinacao);
+	if (estadoButton == HIGH) 
+    {
+      	Serial.print("Alarme de inclinação desativado!");
+      	alarmInclinacao = false;
+		delay(100);
+    }
 }
 
 // esta função é chamada quando o fotoresistore detecta uma mudança brusca na luminosidade
@@ -38,20 +83,62 @@ void ativarAlarmeFogo() {
 
 // esta função é chamada quando o detetor de inclinação detecta uma inclinação
 void ativarAlarmeInclinacao() {
-  // ativa a campainha e os LEDs vermelhos
-  digitalWrite(buzzerPin, HIGH);
-  // pode-se utilizar mais de um LED vermelho para indicar a inclinação, basta ligá-los a pinos de saída diferentes
-  digitalWrite(ledRedRGB, HIGH); // liga o LED vermelho do RGB
-  digitalWrite(ledBlueRGB, LOW); // desliga o LED azul do RGB
-  digitalWrite(ledGreenRGB, LOW); // desliga o LED verde do RGB
-  	delay(5000);
-  digitalWrite(ledRedRGB, LOW); // liga o LED vermelho do RGB
-  digitalWrite(ledBlueRGB, HIGH); // desliga o LED azul do RGB
-  	delay(5000);
-  digitalWrite(ledBlueRGB, LOW); // desliga o LED azul do RGB
-  digitalWrite(ledGreenRGB, HIGH); // desliga o LED verde do RGB
-  	delay(5000);
-  digitalWrite(ledGreenRGB, LOW); // desliga o LED verde do RGB
-  // desativa a campainha e os LEDs vermelhos
-  digitalWrite(buzzerPin, LOW);
+  alarmInclinacao = true;
+}
+
+//Função de conversão da cor para os componentes RGB
+void hueToRGB(int hue, int brightness) {
+  //Hue à escala
+  unsigned int scaledHue = (hue * 6);
+
+  //Segmento de 0 a 5 (ciclo de cores)
+  unsigned int segment = scaledHue / 256;
+
+  //Posição no segmento
+  unsigned int segmentOffset = scaledHue - (segment * 256);
+  
+  unsigned int complement = 0;
+  unsigned int prev = (brightness * (255 - segmentOffset)) / 256;
+  unsigned int next = (brightness * segmentOffset) / 256;
+  
+  if (invert) {
+    brightness = 255 - brightness;
+    complement = 255;
+    prev = 255 - prev;
+    next = 255 - next;
+  }
+
+  switch (segment) {
+    case 0:  // red
+      R = brightness;
+      G = next;
+      B = complement;
+      break;
+    case 1:  // yellow
+      R = prev;
+      G = brightness;
+      B = complement;
+      break;
+    case 2:  // green
+      R = complement;
+      G = brightness;
+      B = next;
+      break;
+    case 3:  // cyan
+      R = complement;
+      G = prev;
+      B = brightness;
+      break;
+    case 4:  // blue
+      R = next;
+      G = complement;
+      B = brightness;
+      break;
+    case 5:  // magenta
+    default:
+      R = brightness;
+      G = complement;
+      B = prev;
+      break;
+  }
 }
