@@ -61,7 +61,7 @@ void loop() {
   estadoButton = digitalRead(buttonInclinacao);
 	if (estadoButton == HIGH) 
     {
-      	Serial.print("Alarme de inclinação desativado!");
+      	Serial.print("Alarme de inclinacao desativado!\n");
       	alarmInclinacao = false;
 		delay(100);
     }
